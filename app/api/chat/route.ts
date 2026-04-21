@@ -5,9 +5,9 @@ import { createServerClient } from "@/lib/supabase/server";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type RequestBody = {
-  message: string;       // The user's new message
-  session_id?: string;   // Omit on the first turn; the API creates a new session
-  store_id?: string;     // Defaults to DEMO_STORE_ID when omitted
+  message: string;      // The user's new message
+  session_id?: string;  // Omit on first turn; API creates a new session
+  store_id?: string;    // Widget can pass a public store_id explicitly
 };
 
 type MessageParam = {
@@ -17,16 +17,13 @@ type MessageParam = {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const STORE_ID   = process.env.DEMO_STORE_ID ?? "aaaaaaaa-0000-0000-0000-000000000001";
-const MAX_HISTORY = 20; // messages to include from DB for context window
+const MAX_HISTORY = 20;
 
 // ─── OpenAI client (singleton) ────────────────────────────────────────────────
 
 function getOpenAI(): OpenAI {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error("OPENAI_API_KEY environment variable is not set");
-  }
+  if (!apiKey) throw new Error("OPENAI_API_KEY environment variable is not set");
   return new OpenAI({ apiKey });
 }
 
@@ -79,13 +76,30 @@ export async function POST(req: NextRequest) {
   }
 
   const { message, session_id: incomingSessionId } = body;
-  const storeId = body.store_id ?? STORE_ID;
 
   if (!message?.trim()) {
     return Response.json({ error: "message is required" }, { status: 400 });
   }
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
+
+  // Resolve store_id: prefer explicit param, otherwise use the authenticated user's store
+  let storeId = body.store_id ?? null;
+  if (!storeId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: store } = await supabase
+        .from("stores")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+      storeId = store?.id ?? null;
+    }
+  }
+
+  if (!storeId) {
+    return Response.json({ error: "No store associated with this session" }, { status: 403 });
+  }
 
   // 2. Fetch store config (system prompt source)
   const { data: store, error: storeErr } = await supabase

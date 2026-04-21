@@ -1,27 +1,34 @@
-import Sidebar from "@/components/layout/Sidebar";
-import TopBar from "@/components/layout/TopBar";
-
-const pageTitles: Record<string, string> = {
-  "/dashboard": "לוח בקרה",
-  "/chat-logs": "יומן שיחות",
-  "/support": "תור תמיכה",
-  "/customers": "לקוחות",
-  "/products": "מוצרים",
-  "/automations": "אוטומציות",
-  "/campaigns": "קמפיינים",
-  "/team": "צוות",
-  "/settings/store": "אודות החנות",
-  "/settings/persona": "אופי הסוכן",
-  "/settings/integrations": "אינטגרציות",
-  "/widget": "ווידג'ט צ'אט",
-};
-
+import { redirect } from "next/navigation";
+import { createServerClient } from "@/lib/supabase/server";
 import DashboardLayoutClient from "./DashboardLayoutClient";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <DashboardLayoutClient>{children}</DashboardLayoutClient>;
+  const supabase = await createServerClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  // Fetch the user's store (creates context for all child pages)
+  const { data: store } = await supabase
+    .from("stores")
+    .select("id, name, agent_name")
+    .eq("user_id", user.id)
+    .single();
+
+  const userMeta = {
+    name:      (user.user_metadata?.full_name as string | undefined) ?? user.email ?? "משתמש",
+    email:     user.email ?? "",
+    initials:  ((user.user_metadata?.full_name as string | undefined) ?? user.email ?? "?")[0].toUpperCase(),
+    storeName: store?.name ?? "החנות שלי",
+  };
+
+  return (
+    <DashboardLayoutClient userMeta={userMeta}>
+      {children}
+    </DashboardLayoutClient>
+  );
 }
