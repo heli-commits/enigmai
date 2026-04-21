@@ -2,7 +2,6 @@
 // Only import this in Server Components, Route Handlers, and Server Actions.
 // NEVER expose this to the browser.
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "./types";
 
 export function createServerClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -14,7 +13,8 @@ export function createServerClient() {
     );
   }
 
-  return createClient<Database>(url, key, {
+  // No Database generic – query results are cast explicitly at the call-site.
+  return createClient(url, key, {
     auth: { persistSession: false },
   });
 }

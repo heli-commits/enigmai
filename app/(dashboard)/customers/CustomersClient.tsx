@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Star, ShoppingBag, MessageCircle, TrendingUp } from "lucide-react";
+import { Search, Star, ShoppingBag, MessageCircle, TrendingUp, UserPlus } from "lucide-react";
 import type { Customer } from "@/lib/supabase/types";
+import AddCustomerModal from "@/components/modals/AddCustomerModal";
 
 const statusLabels: Record<string, string> = { vip: "VIP", regular: "רגיל", new: "חדש" };
 const statusColors: Record<string, string> = {
@@ -27,7 +28,8 @@ type Props = {
 };
 
 export default function CustomersClient({ customers, totalRevenue, vipCount }: Props) {
-  const [search, setSearch] = useState("");
+  const [search,      setSearch]      = useState("");
+  const [modalOpen,   setModalOpen]   = useState(false);
 
   const filtered = customers.filter(
     (c) =>
@@ -36,7 +38,21 @@ export default function CustomersClient({ customers, totalRevenue, vipCount }: P
   );
 
   return (
+    <>
+      <AddCustomerModal open={modalOpen} onClose={() => setModalOpen(false)} />
+
     <div className="space-y-4">
+      {/* Add customer button */}
+      <div className="flex justify-start">
+        <button
+          onClick={() => setModalOpen(true)}
+          className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
+        >
+          <UserPlus size={16} />
+          הוסף לקוח
+        </button>
+      </div>
+
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-4">
@@ -142,5 +158,6 @@ export default function CustomersClient({ customers, totalRevenue, vipCount }: P
         </table>
       </div>
     </div>
+    </>
   );
 }

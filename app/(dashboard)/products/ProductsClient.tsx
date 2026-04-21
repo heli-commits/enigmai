@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Search, Plus, Package, Wand2, ChevronDown, Star, MoreVertical } from "lucide-react";
 import type { Product } from "@/lib/supabase/types";
+import AddProductModal from "@/components/modals/AddProductModal";
 
 // Emoji fallbacks by keyword in the product name (when no image_url)
 const emojiFor = (name: string): string => {
@@ -24,6 +25,7 @@ export default function ProductsClient({ products }: { products: ProductRow[] })
   const [sort,        setSort]        = useState("הנמכרים ביותר");
   const [sortOpen,    setSortOpen]    = useState(false);
   const [aiRewriting, setAiRewriting] = useState<string | null>(null);
+  const [modalOpen,   setModalOpen]   = useState(false);
 
   const sorted = [...products]
     .filter((p) => p.name.includes(search) || (p.sku ?? "").includes(search))
@@ -40,6 +42,9 @@ export default function ProductsClient({ products }: { products: ProductRow[] })
   };
 
   return (
+    <>
+      <AddProductModal open={modalOpen} onClose={() => setModalOpen(false)} />
+
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -77,7 +82,10 @@ export default function ProductsClient({ products }: { products: ProductRow[] })
             />
           </div>
         </div>
-        <button className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors">
+        <button
+          onClick={() => setModalOpen(true)}
+          className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
+        >
           <Plus size={16} />
           הוסף מוצר
         </button>
@@ -160,5 +168,6 @@ export default function ProductsClient({ products }: { products: ProductRow[] })
         )}
       </div>
     </div>
+    </>
   );
 }

@@ -34,5 +34,5 @@ export default async function ChatLogsPage() {
     customer: { id: string; name: string } | null;
   };
 
-  return <ChatLogsClient sessions={(sessions ?? []) as SessionRow[]} />;
+  return <ChatLogsClient sessions={(sessions ?? []) as unknown as SessionRow[]} />;
 }
