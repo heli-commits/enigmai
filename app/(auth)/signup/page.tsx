@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { Loader2, AlertCircle, Store } from "lucide-react";
+import { Loader2, AlertCircle, Store, MailCheck } from "lucide-react";
 import { signup } from "@/app/actions/auth";
 import type { AuthFormState } from "@/app/actions/auth";
 
@@ -11,6 +11,32 @@ const initialState: AuthFormState = {};
 export default function SignupPage() {
   const [state, formAction, isPending] = useActionState(signup, initialState);
 
+  // ── Success: email confirmation pending ──────────────────────────────────────
+  if (state.success) {
+    return (
+      <div className="w-full max-w-sm text-center" dir="rtl">
+        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <MailCheck size={32} className="text-green-600" />
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-3">נרשמת בהצלחה!</h1>
+        <p className="text-gray-600 text-sm leading-relaxed mb-6">
+          שלחנו לך מייל אימות לכתובת שהזנת.
+          <br />
+          אנא פתחי את המייל ולחצי על הקישור כדי לאשר את החשבון ולהיכנס.
+        </p>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+          לא קיבלת מייל? בדקי גם בתיקיית הספאם.
+        </div>
+        <p className="text-center text-sm text-gray-500 mt-6">
+          <Link href="/login" className="text-indigo-600 font-medium hover:underline">
+            חזרה להתחברות
+          </Link>
+        </p>
+      </div>
+    );
+  }
+
+  // ── Form ─────────────────────────────────────────────────────────────────────
   return (
     <div className="w-full max-w-sm" dir="rtl">
       {/* Logo */}
@@ -24,8 +50,8 @@ export default function SignupPage() {
 
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
         {state.error && (
-          <div className="mb-5 flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-            <AlertCircle size={16} className="text-red-500 flex-shrink-0" />
+          <div className="mb-5 flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+            <AlertCircle size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-red-700">{state.error}</p>
           </div>
         )}
@@ -106,7 +132,9 @@ export default function SignupPage() {
             disabled={isPending}
             className="w-full py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 disabled:opacity-60 transition-colors flex items-center justify-center gap-2 mt-2"
           >
-            {isPending ? <><Loader2 size={15} className="animate-spin" />יוצר חשבון...</> : "צור חשבון"}
+            {isPending
+              ? <><Loader2 size={15} className="animate-spin" />יוצר חשבון...</>
+              : "צור חשבון"}
           </button>
         </form>
       </div>

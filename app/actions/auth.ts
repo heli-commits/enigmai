@@ -8,6 +8,7 @@ import { createServerClient, createServiceClient } from "@/lib/supabase/server";
 export type AuthFormState = {
   error?: string;
   fieldErrors?: Partial<Record<"email" | "password" | "name", string>>;
+  success?: boolean;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -34,9 +35,8 @@ export async function login(
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    if (error.code === "invalid_credentials") {
-      return { error: "אימייל או סיסמה שגויים" };
-    }
+    if (error.code === "invalid_credentials")   return { error: "אימייל או סיסמה שגויים" };
+    if (error.code === "email_not_confirmed")   return { error: "האימייל שלך טרם אושר. בדקי את תיבת הדואר ולחצי על קישור האימות." };
     return { error: error.message };
   }
 
@@ -90,10 +90,10 @@ export async function signup(
 
   if (storeErr) {
     console.error("Store create error:", storeErr.message);
-    // Auth user was created – don't leave them orphaned; still proceed
   }
 
-  redirect("/dashboard");
+  // Email confirmation is required – don't redirect yet, show success message
+  return { success: true };
 }
 
 // ─── Logout ───────────────────────────────────────────────────────────────────
