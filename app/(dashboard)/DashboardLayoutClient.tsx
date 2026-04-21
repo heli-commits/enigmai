@@ -2,30 +2,32 @@
 
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/layout/Sidebar";
-import TopBar from "@/components/layout/TopBar";
-
-const pageTitles: Record<string, string> = {
-  "/dashboard":             "לוח בקרה",
-  "/chat-logs":             "יומן שיחות",
-  "/support":               "תור תמיכה",
-  "/customers":             "לקוחות",
-  "/products":              "מוצרים",
-  "/automations":           "אוטומציות",
-  "/campaigns":             "קמפיינים",
-  "/team":                  "צוות",
-  "/settings/store":        "אודות החנות",
-  "/settings/persona":      "אופי הסוכן",
-  "/settings/integrations": "אינטגרציות",
-  "/widget":                "ווידג'ט צ'אט",
-  "/playground":            "מגרש משחקים – AI",
-};
+import TopBar  from "@/components/layout/TopBar";
+import { LanguageProvider, useLanguage, PAGE_TITLES } from "@/lib/i18n";
 
 type UserMeta = {
-  name: string;
-  email: string;
-  initials: string;
+  name:      string;
+  email:     string;
+  initials:  string;
   storeName: string;
 };
+
+function Layout({ children, userMeta }: { children: React.ReactNode; userMeta: UserMeta }) {
+  const { lang, s } = useLanguage();
+  const pathname    = usePathname();
+  const title       = PAGE_TITLES[pathname]?.[lang] ?? "EnigmAI";
+  const isRTL       = s.dir === "rtl";
+
+  return (
+    <div className="flex min-h-screen bg-gray-50" dir={s.dir}>
+      <Sidebar />
+      <div className={`flex-1 ${isRTL ? "mr-64" : "ml-64"} flex flex-col min-h-screen`}>
+        <TopBar title={title} userMeta={userMeta} />
+        <main className="flex-1 p-6">{children}</main>
+      </div>
+    </div>
+  );
+}
 
 export default function DashboardLayoutClient({
   children,
@@ -34,16 +36,9 @@ export default function DashboardLayoutClient({
   children: React.ReactNode;
   userMeta: UserMeta;
 }) {
-  const pathname = usePathname();
-  const title    = pageTitles[pathname] ?? "EnigmAI";
-
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
-      <div className="flex-1 mr-64 flex flex-col min-h-screen">
-        <TopBar title={title} userMeta={userMeta} />
-        <main className="flex-1 p-6">{children}</main>
-      </div>
-    </div>
+    <LanguageProvider>
+      <Layout userMeta={userMeta}>{children}</Layout>
+    </LanguageProvider>
   );
 }

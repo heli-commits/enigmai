@@ -1,5 +1,6 @@
 import AnalyticsChart from "@/components/dashboard/AnalyticsChart";
-import { ShoppingCart, TrendingUp, MousePointerClick, MessageCircle, Users, Star } from "lucide-react";
+import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import { TrendingUp, MessageCircle, Users, Star } from "lucide-react";
 
 const cartData = [
   { date: "26/3", value: 12, amount: 1840 },
@@ -68,13 +69,7 @@ const stats = [
 export default function DashboardPage() {
   return (
     <div className="space-y-6">
-      {/* Date range indicator */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-4 py-2 text-sm text-gray-600">
-          <span>26 מרץ – 20 אפריל 2026</span>
-        </div>
-        <p className="text-sm text-gray-500">עודכן לאחרונה: היום, 15:30</p>
-      </div>
+      <DashboardHeader />
 
       {/* Stats row */}
       <div className="grid grid-cols-4 gap-4">
