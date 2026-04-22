@@ -61,7 +61,7 @@ export default function CustomersClient({ customers, totalRevenue, vipCount }: P
         </div>
 
         {/* Summary cards */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-4">
             <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
               <ShoppingBag size={18} className="text-indigo-600" />
@@ -121,9 +121,10 @@ export default function CustomersClient({ customers, totalRevenue, vipCount }: P
               />
             </div>
 
-            {/* Table */}
+            {/* Table – horizontally scrollable on mobile */}
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <table className="w-full">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px]">
                 <thead>
                   <tr className="border-b border-gray-100">
                     {[s.colName, s.colOrders, s.colSpent, s.colRating, s.colLastChat, s.colStatus, s.colActions].map((h) => (
@@ -179,6 +180,7 @@ export default function CustomersClient({ customers, totalRevenue, vipCount }: P
                   )}
                 </tbody>
               </table>
+              </div>
             </div>
           </>
         )}

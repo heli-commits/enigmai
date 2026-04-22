@@ -16,8 +16,9 @@ import {
   ChevronUp,
   Shield,
   MessageCircle,
+  X,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/lib/i18n";
 
 type NavItem = {
@@ -27,15 +28,15 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { href: "/dashboard",  icon: LayoutDashboard, labelKey: "dashboard"  },
-  { href: "/chat-logs",  icon: MessageSquare,   labelKey: "chatLogs"   },
-  { href: "/support",    icon: Headphones,       labelKey: "support"    },
-  { href: "/customers",  icon: Users,            labelKey: "customers"  },
-  { href: "/products",   icon: Package,          labelKey: "products"   },
-  { href: "/automations",icon: Zap,              labelKey: "automations"},
-  { href: "/campaigns",  icon: Megaphone,        labelKey: "campaigns"  },
-  { href: "/team",       icon: UserCog,          labelKey: "team"       },
-  { href: "/widget",     icon: MessageCircle,    labelKey: "widget"     },
+  { href: "/dashboard",   icon: LayoutDashboard, labelKey: "dashboard"   },
+  { href: "/chat-logs",   icon: MessageSquare,   labelKey: "chatLogs"    },
+  { href: "/support",     icon: Headphones,      labelKey: "support"     },
+  { href: "/customers",   icon: Users,           labelKey: "customers"   },
+  { href: "/products",    icon: Package,         labelKey: "products"    },
+  { href: "/automations", icon: Zap,             labelKey: "automations" },
+  { href: "/campaigns",   icon: Megaphone,       labelKey: "campaigns"   },
+  { href: "/team",        icon: UserCog,         labelKey: "team"        },
+  { href: "/widget",      icon: MessageCircle,   labelKey: "widget"      },
 ];
 
 type SettingsItem = {
@@ -49,18 +50,34 @@ const settingsItems: SettingsItem[] = [
   { href: "/settings/integrations", labelKey: "settingsIntegrations" },
 ];
 
-export default function Sidebar() {
-  const { s }     = useLanguage();
-  const pathname  = usePathname();
-  const isRTL     = s.dir === "rtl";
+type Props = {
+  open:    boolean;
+  onClose: () => void;
+};
+
+export default function Sidebar({ open, onClose }: Props) {
+  const { s }    = useLanguage();
+  const pathname = usePathname();
+  const isRTL    = s.dir === "rtl";
   const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith("/settings"));
+
+  // Close sidebar on route change (mobile)
+  useEffect(() => { onClose(); }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const sideEdge    = isRTL ? "right-0 border-l" : "left-0 border-r";
+  const translateOut = isRTL ? "translate-x-full" : "-translate-x-full";
 
   return (
     <aside
-      className={`fixed ${isRTL ? "right-0 border-l" : "left-0 border-r"} top-0 h-full w-64 bg-white border-gray-200 flex flex-col z-40 shadow-sm`}
+      className={`
+        fixed ${sideEdge} top-0 h-full w-64 bg-white border-gray-200 flex flex-col z-40 shadow-sm
+        transform transition-transform duration-200
+        ${open ? "translate-x-0" : translateOut}
+        lg:translate-x-0
+      `}
     >
-      {/* Logo */}
-      <div className="p-5 border-b border-gray-100">
+      {/* Logo row */}
+      <div className="p-5 border-b border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
             <span className="text-white font-bold text-sm">AI</span>
@@ -70,6 +87,13 @@ export default function Sidebar() {
             <p className="text-xs text-gray-500">{isRTL ? "סוכן חכם לחנות" : "Smart store agent"}</p>
           </div>
         </div>
+        {/* Close button – mobile only */}
+        <button
+          onClick={onClose}
+          className="lg:hidden p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"
+        >
+          <X size={18} />
+        </button>
       </div>
 
       {/* Navigation */}
@@ -92,7 +116,7 @@ export default function Sidebar() {
           );
         })}
 
-        {/* Settings – expandable group */}
+        {/* Settings – expandable */}
         <button
           onClick={() => setSettingsOpen(!settingsOpen)}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
@@ -101,7 +125,10 @@ export default function Sidebar() {
               : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
           }`}
         >
-          <Settings size={18} className={pathname.startsWith("/settings") ? "text-indigo-600" : "text-gray-400"} />
+          <Settings
+            size={18}
+            className={pathname.startsWith("/settings") ? "text-indigo-600" : "text-gray-400"}
+          />
           <span className="flex-1 text-right">{s.nav.settings}</span>
           {settingsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Globe, LogOut, Settings, ChevronDown } from "lucide-react";
+import { Bell, Globe, LogOut, Settings, ChevronDown, Menu } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { logout } from "@/app/actions/auth";
 import { useLanguage } from "@/lib/i18n";
@@ -15,9 +15,11 @@ type UserMeta = {
 export default function TopBar({
   title,
   userMeta,
+  onMenuClick,
 }: {
-  title:    string;
-  userMeta: UserMeta;
+  title:       string;
+  userMeta:    UserMeta;
+  onMenuClick: () => void;
 }) {
   const { lang, setLang, s } = useLanguage();
   const isRTL = s.dir === "rtl";
@@ -46,26 +48,38 @@ export default function TopBar({
     setNotifOpen(false);
   }
 
-  // Dropdowns open toward the nearer viewport edge
   const dropAlign = isRTL ? { left: 0 } : { right: 0 };
 
   return (
     <header
       ref={barRef}
-      className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-30"
+      className="h-14 sm:h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-30"
     >
-      <h1 className="text-lg font-semibold text-gray-900">{title}</h1>
-
+      {/* Left side: hamburger (mobile) + title */}
       <div className="flex items-center gap-3">
+        <button
+          onClick={onMenuClick}
+          className="lg:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+          aria-label="Open menu"
+        >
+          <Menu size={20} />
+        </button>
+        <h1 className="text-base sm:text-lg font-semibold text-gray-900 truncate max-w-[160px] sm:max-w-none">
+          {title}
+        </h1>
+      </div>
 
-        {/* ── Language toggle ─────────────────────────────────────── */}
-        <div className="relative">
+      {/* Right side: controls */}
+      <div className="flex items-center gap-2 sm:gap-3">
+
+        {/* Language toggle – hidden on very small screens */}
+        <div className="relative hidden sm:block">
           <button
             onClick={() => { closeAll(); setLangOpen((v) => !v); }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-gray-600 hover:bg-gray-50 border border-gray-200 transition-colors"
           >
             <Globe size={15} />
-            <span>{lang === "he" ? "עברית" : "English"}</span>
+            <span className="hidden md:inline">{lang === "he" ? "עברית" : "English"}</span>
             <ChevronDown size={13} />
           </button>
 
@@ -89,7 +103,7 @@ export default function TopBar({
           )}
         </div>
 
-        {/* ── Notifications bell ───────────────────────────────────── */}
+        {/* Notifications bell */}
         <div className="relative">
           <button
             onClick={() => { closeAll(); setNotifOpen((v) => !v); }}
@@ -101,7 +115,7 @@ export default function TopBar({
 
           {notifOpen && (
             <div
-              style={dropAlign}
+              style={isRTL ? { left: 0 } : { right: 0 }}
               className="absolute top-10 bg-white rounded-xl shadow-lg border border-gray-100 w-72 z-50"
             >
               <div className="px-4 py-3 border-b border-gray-100">
@@ -115,7 +129,7 @@ export default function TopBar({
           )}
         </div>
 
-        {/* ── User profile ─────────────────────────────────────────── */}
+        {/* User profile */}
         <div className="relative">
           <button
             onClick={() => { closeAll(); setProfileOpen((v) => !v); }}
@@ -124,20 +138,39 @@ export default function TopBar({
             <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-white text-sm font-semibold">{userMeta.initials}</span>
             </div>
-            <div className={isRTL ? "text-right" : "text-left"}>
+            <div className={`hidden sm:block ${isRTL ? "text-right" : "text-left"}`}>
               <p className="text-sm font-medium text-gray-900 leading-tight">{userMeta.name}</p>
               <p className="text-xs text-gray-500 leading-tight">{userMeta.storeName}</p>
             </div>
-            <ChevronDown size={14} className="text-gray-400" />
+            <ChevronDown size={14} className="text-gray-400 hidden sm:block" />
           </button>
 
           {profileOpen && (
             <div
-              style={dropAlign}
+              style={isRTL ? { left: 0 } : { right: 0 }}
               className="absolute top-12 bg-white rounded-lg shadow-lg border border-gray-100 py-1 w-44 z-50"
             >
               <div className="px-3 py-2 border-b border-gray-100">
                 <p className="text-xs text-gray-400 truncate">{userMeta.email}</p>
+              </div>
+              {/* Mobile-only language toggle inside profile */}
+              <div className="sm:hidden border-b border-gray-100 p-2">
+                <p className="text-xs text-gray-400 px-1 mb-1">{s.notifications}</p>
+                <div className="flex gap-1">
+                  {(["he", "en"] as const).map((l) => (
+                    <button
+                      key={l}
+                      onClick={() => { setLang(l); setProfileOpen(false); }}
+                      className={`flex-1 py-1.5 text-xs rounded-lg transition-colors ${
+                        lang === l
+                          ? "bg-indigo-600 text-white"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
+                    >
+                      {l === "he" ? "עברית" : "EN"}
+                    </button>
+                  ))}
+                </div>
               </div>
               <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50">
                 <Settings size={14} />
@@ -155,7 +188,6 @@ export default function TopBar({
             </div>
           )}
         </div>
-
       </div>
     </header>
   );
