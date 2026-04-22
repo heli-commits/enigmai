@@ -33,19 +33,17 @@ function parseMarkdown(text: string): string {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const WELCOME: Message = {
-  id:   "welcome",
-  role: "agent",
-  text: "שלום! אני **ארי**, מומחה המתנות שלנו 🎁\n\nאיך אפשר לעזור לך היום?",
-  time: "",
-};
+type Props = { agentName?: string };
 
-export default function ChatWidget() {
+export default function ChatWidget({ agentName = "ארי" }: Props) {
   const [open,      setOpen]      = useState(true);
   const [minimized, setMinimized] = useState(false);
-  const [messages,  setMessages]  = useState<Message[]>([
-    { ...WELCOME, time: now() },
-  ]);
+  const [messages,  setMessages]  = useState<Message[]>([{
+    id:   "welcome",
+    role: "agent",
+    text: `שלום! אני **${agentName}** 🎁\n\nאיך אפשר לעזור לך היום?`,
+    time: now(),
+  }]);
   const [input,     setInput]     = useState("");
   const [typing,    setTyping]    = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -148,8 +146,8 @@ export default function ChatWidget() {
         </div>
         <div className="flex items-center gap-2">
           <div className="text-right">
-            <p className="text-white text-sm font-semibold leading-tight">ארי</p>
-            <p className="text-indigo-200 text-xs leading-tight">מומחה המתנות</p>
+            <p className="text-white text-sm font-semibold leading-tight">{agentName}</p>
+            <p className="text-indigo-200 text-xs leading-tight">סוכן AI</p>
           </div>
           <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center relative">
             <Bot size={16} className="text-white" />

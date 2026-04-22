@@ -48,6 +48,7 @@ export const STRINGS = {
       settingsStore:        "אודות החנות",
       settingsPersona:      "אופי הסוכן",
       settingsIntegrations: "אינטגרציות",
+      playground:           "מגרש משחקים",
     },
     // TopBar
     accountSettings: "הגדרות חשבון",
@@ -108,6 +109,7 @@ export const STRINGS = {
       settingsStore:        "Store Info",
       settingsPersona:      "Agent Persona",
       settingsIntegrations: "Integrations",
+      playground:           "AI Playground",
     },
     accountSettings: "Account Settings",
     logout:          "Logout",

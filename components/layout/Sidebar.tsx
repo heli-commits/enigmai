@@ -16,6 +16,7 @@ import {
   ChevronUp,
   Shield,
   MessageCircle,
+  FlaskConical,
   X,
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -37,6 +38,7 @@ const navItems: NavItem[] = [
   { href: "/campaigns",   icon: Megaphone,       labelKey: "campaigns"   },
   { href: "/team",        icon: UserCog,         labelKey: "team"        },
   { href: "/widget",      icon: MessageCircle,   labelKey: "widget"      },
+  { href: "/playground",  icon: FlaskConical,    labelKey: "playground"  },
 ];
 
 type SettingsItem = {
