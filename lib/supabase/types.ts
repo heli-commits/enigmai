@@ -16,9 +16,15 @@ export interface Store {
   about: string | null;
   agent_name: string;
   agent_persona: {
-    traits?: string;
-    rules?: string;
-    style?: string;
+    traits?:       string;
+    rules?:        string;
+    style?:        string;
+    role?:         string;
+    greeting?:     string;
+    escalation?:   string;
+    knowledge?:    string;
+    faqs?:         string;
+    restrictions?: string;
   };
   created_at: string;
 }

@@ -11,7 +11,7 @@ export const getStore = cache(async () => {
 
   const { data: store } = await supabase
     .from("stores")
-    .select("id, name, agent_name, agent_persona, about")
+    .select("id, name, domain, phone, address, agent_name, agent_persona, about")
     .eq("user_id", user.id)
     .single();
 

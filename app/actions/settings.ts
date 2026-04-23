@@ -71,3 +71,41 @@ export async function savePersonaSettings(
   revalidatePath("/settings/persona");
   return { success: true };
 }
+
+// ─── Per-tab persona save ─────────────────────────────────────────────────────
+
+export async function savePersonaTabAction(
+  personaUpdates: Record<string, string>,
+  agentNameUpdate?: string
+): Promise<PersonaSettingsState> {
+  const store = await getStore();
+  if (!store) return { error: "לא מחובר" };
+
+  const supabase = await createServerClient();
+
+  // Read current persona to avoid overwriting other tabs
+  const { data } = await supabase
+    .from("stores")
+    .select("agent_persona")
+    .eq("id", store.id)
+    .single();
+
+  const current = (data?.agent_persona as Record<string, string>) ?? {};
+  const merged  = { ...current, ...personaUpdates };
+
+  const updateObj: Record<string, unknown> = { agent_persona: merged };
+  if (agentNameUpdate !== undefined) {
+    if (!agentNameUpdate.trim()) return { error: "שם הסוכן הוא שדה חובה" };
+    updateObj.agent_name = agentNameUpdate.trim();
+  }
+
+  const { error } = await supabase
+    .from("stores")
+    .update(updateObj)
+    .eq("id", store.id);
+
+  if (error) return { error: `שגיאת שמירה: ${error.message}` };
+
+  revalidatePath("/settings/persona");
+  return { success: true };
+}

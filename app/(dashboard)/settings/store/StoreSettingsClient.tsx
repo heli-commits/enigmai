@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
-import { Save, Globe, MapPin, Phone, Clock, Store, AlertCircle, CheckCircle2 } from "lucide-react";
+import { useActionState, useState } from "react";
+import Link from "next/link";
+import { Save, Globe, MapPin, Phone, Clock, Store, AlertCircle, CheckCircle2, Lock, Wand2 } from "lucide-react";
 import { saveStoreSettings } from "@/app/actions/settings";
 import type { StoreSettingsState } from "@/app/actions/settings";
 
@@ -19,15 +20,30 @@ const empty: StoreSettingsState = {};
 
 export default function StoreSettingsClient({ initial }: { initial: Initial }) {
   const [state, formAction, isPending] = useActionState(saveStoreSettings, empty);
+  const [showRequestChange, setShowRequestChange] = useState(false);
+
+  const domainLocked = initial.domain !== "";
 
   return (
-    <form action={formAction} className="max-w-2xl space-y-6">
+    <form action={formAction} className="max-w-2xl space-y-6" dir="rtl">
 
       {/* Feedback banners */}
       {state.success && (
         <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
           <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
           <p className="text-sm text-emerald-700">השינויים נשמרו בהצלחה!</p>
+        </div>
+      )}
+      {state.success && domainLocked && (
+        <div className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+          <Link
+            href="/settings/persona"
+            className="flex items-center gap-1.5 text-sm font-medium text-amber-700 hover:underline whitespace-nowrap"
+          >
+            <Wand2 size={14} />
+            צור אישיות סוכן
+          </Link>
+          <p className="text-sm text-amber-800">האתר נשמר! רוצה ליצור אישיות סוכן אוטומטית?</p>
         </div>
       )}
       {state.error && (
@@ -59,19 +75,48 @@ export default function StoreSettingsClient({ initial }: { initial: Initial }) {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Domain field – locked once set */}
             <div className="text-right">
               <label className="text-sm font-medium text-gray-700 block mb-1.5 flex items-center justify-end gap-1.5">
                 אתר
                 <Globe size={13} className="text-gray-400" />
               </label>
-              <input
-                name="domain"
-                type="text"
-                defaultValue={initial.domain}
-                placeholder="www.myshop.co.il"
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+              {domainLocked ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowRequestChange(v => !v)}
+                      className="text-xs text-indigo-600 hover:underline whitespace-nowrap"
+                    >
+                      בקש שינוי
+                    </button>
+                    <input
+                      name="domain"
+                      type="text"
+                      readOnly
+                      value={initial.domain}
+                      className="flex-1 min-w-0 border border-gray-200 bg-gray-50 rounded-xl px-4 py-2.5 text-sm text-right text-gray-500 cursor-not-allowed"
+                    />
+                    <Lock size={15} className="text-gray-400 flex-shrink-0" />
+                  </div>
+                  {showRequestChange && (
+                    <p className="text-xs text-amber-600 mt-1.5">
+                      לשינוי כתובת האתר, פנה לתמיכה: support@enigmai.co.il
+                    </p>
+                  )}
+                </>
+              ) : (
+                <input
+                  name="domain"
+                  type="text"
+                  defaultValue={initial.domain}
+                  placeholder="www.myshop.co.il"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              )}
             </div>
+
             <div className="text-right">
               <label className="text-sm font-medium text-gray-700 block mb-1.5 flex items-center justify-end gap-1.5">
                 טלפון
@@ -136,10 +181,7 @@ export default function StoreSettingsClient({ initial }: { initial: Initial }) {
   );
 }
 
-// Separate component so char-count state is isolated
 function AboutField({ defaultValue, maxChars }: { defaultValue: string; maxChars: number }) {
-  // Can't use useState in Server Component – this is a Client Component already ("use client" inherited)
-  // Use uncontrolled with a counter via onInput trick
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6">
       <div className="flex items-center justify-between mb-4">
@@ -157,7 +199,7 @@ function AboutField({ defaultValue, maxChars }: { defaultValue: string; maxChars
         maxLength={maxChars}
         rows={10}
         onInput={(e) => {
-          const el   = e.currentTarget;
+          const el      = e.currentTarget;
           const counter = document.getElementById("about-counter");
           if (counter) counter.textContent = `${el.value.length} / ${maxChars}`;
         }}
