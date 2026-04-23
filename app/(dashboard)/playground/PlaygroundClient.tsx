@@ -98,10 +98,11 @@ export default function PlaygroundClient({ storeName, agentName, traits, rules, 
       setMsgCount((n) => n + 1);
       setMessages((prev) => [...prev, { id: uid(), role: "agent", text: data.reply, time: nowStr() }]);
     } catch (err) {
-      console.error(err);
+      console.error("[playground] API error:", err);
+      const msg = err instanceof Error ? err.message : "שגיאה לא ידועה";
       setMessages((prev) => [
         ...prev,
-        { id: uid(), role: "agent", text: "שגיאה בחיבור ל-API. בדוק שה-OPENAI_API_KEY מוגדר.", time: nowStr(), isError: true },
+        { id: uid(), role: "agent", text: `שגיאה: ${msg}`, time: nowStr(), isError: true },
       ]);
     } finally {
       setTyping(false);

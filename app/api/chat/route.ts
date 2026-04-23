@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import OpenAI from "openai";
 import { createServerClient } from "@/lib/supabase/server";
 
+export const runtime = "nodejs"; // explicitly opt out of Edge Runtime
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type RequestBody = {
@@ -19,12 +21,10 @@ type MessageParam = {
 
 const MAX_HISTORY = 20;
 
-// ─── OpenAI client (singleton) ────────────────────────────────────────────────
+// ─── OpenAI client ────────────────────────────────────────────────────────────
 
 function getOpenAI(): OpenAI {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY environment variable is not set");
-  return new OpenAI({ apiKey });
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 }
 
 // ─── System prompt builder ────────────────────────────────────────────────────
@@ -67,7 +67,16 @@ function buildSystemPrompt(store: {
 // ─── Route Handler ────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  // 1. Parse + validate body
+  // ── Debug: confirm key presence without exposing value ──────────────────────
+  console.log("[chat] OPENAI_API_KEY present:", !!process.env.OPENAI_API_KEY);
+
+  // 1. Fail fast if the key is missing (before any async work)
+  if (!process.env.OPENAI_API_KEY) {
+    console.error("[chat] OPENAI_API_KEY is not set – aborting");
+    return Response.json({ error: "OPENAI_API_KEY is not configured on the server" }, { status: 500 });
+  }
+
+  // 2. Parse + validate body
   let body: RequestBody;
   try {
     body = await req.json();
