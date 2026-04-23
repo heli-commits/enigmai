@@ -5,7 +5,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import CustomersClient from "./CustomersClient";
 import type { Customer } from "@/lib/supabase/types";
 
-type CustomerRow = Pick<Customer, "id" | "name" | "email" | "status" | "total_spent" | "orders_count" | "rating" | "last_chat_at">;
+type CustomerRow = Pick<Customer, "id" | "name" | "email" | "phone" | "status" | "total_spent" | "orders_count" | "rating" | "last_chat_at">;
 
 export default async function CustomersPage() {
   const store = await getStore();
@@ -14,7 +14,7 @@ export default async function CustomersPage() {
   const supabase = await createServerClient();
   const { data, error } = await supabase
     .from("customers")
-    .select("id, name, email, status, total_spent, orders_count, rating, last_chat_at")
+    .select("id, name, email, phone, status, total_spent, orders_count, rating, last_chat_at")
     .eq("store_id", store.id)
     .order("total_spent", { ascending: false });
 

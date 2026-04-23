@@ -50,3 +50,56 @@ export async function createCustomer(
   revalidatePath("/customers");
   return { success: true };
 }
+
+export async function updateCustomer(
+  _prev: CustomerFormState,
+  formData: FormData
+): Promise<CustomerFormState> {
+  const store = await getStore();
+  if (!store) return { error: "לא מחובר" };
+
+  const id     = (formData.get("id")     as string | null) ?? "";
+  const name   = (formData.get("name")   as string | null)?.trim() ?? "";
+  const email  = (formData.get("email")  as string | null)?.trim() ?? "";
+  const phone  = (formData.get("phone")  as string | null)?.trim() ?? "";
+  const status = (formData.get("status") as string | null) ?? "new";
+
+  if (!id) return { error: "מזהה לקוח חסר" };
+
+  const fieldErrors: CustomerFormState["fieldErrors"] = {};
+  if (!name)                                                 fieldErrors.name   = "שם חובה";
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))  fieldErrors.email  = "כתובת אימייל לא תקינה";
+  if (!VALID_STATUSES.includes(status as CustomerStatus))    fieldErrors.status = "סטטוס לא חוקי";
+  if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
+
+  const supabase = await createServerClient();
+  const { error } = await supabase
+    .from("customers")
+    .update({ name, email: email || null, phone: phone || null, status: status as CustomerStatus })
+    .eq("id", id)
+    .eq("store_id", store.id);
+
+  if (error) {
+    if (error.code === "23505") return { fieldErrors: { email: "כתובת אימייל כבר קיימת במערכת" } };
+    return { error: `שגיאת מסד נתונים: ${error.message}` };
+  }
+
+  revalidatePath("/customers");
+  return { success: true };
+}
+
+export async function deleteCustomer(id: string): Promise<{ error?: string }> {
+  const store = await getStore();
+  if (!store) return { error: "לא מחובר" };
+
+  const supabase = await createServerClient();
+  const { error } = await supabase
+    .from("customers")
+    .delete()
+    .eq("id", id)
+    .eq("store_id", store.id);
+
+  if (error) return { error: error.message };
+  revalidatePath("/customers");
+  return {};
+}

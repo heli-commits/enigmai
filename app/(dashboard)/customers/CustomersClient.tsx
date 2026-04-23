@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Search, Star, ShoppingBag, MessageCircle, TrendingUp, UserPlus, Users } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Search, Star, ShoppingBag, MessageCircle, TrendingUp, UserPlus, Users, Pencil, Trash2 } from "lucide-react";
 import type { Customer } from "@/lib/supabase/types";
 import AddCustomerModal from "@/components/modals/AddCustomerModal";
+import EditCustomerModal from "@/components/modals/EditCustomerModal";
+import { deleteCustomer } from "@/app/actions/customers";
 import { useLanguage } from "@/lib/i18n";
 
 const statusColors: Record<string, string> = {
@@ -21,16 +23,35 @@ function formatLastChat(iso: string | null, lang: string): string {
   return lang === "he" ? `לפני ${days} ימים` : `${days}d ago`;
 }
 
+type CustomerRow = Pick<Customer, "id" | "name" | "email" | "phone" | "status" | "total_spent" | "orders_count" | "rating" | "last_chat_at">;
+
 type Props = {
-  customers: Pick<Customer, "id" | "name" | "email" | "status" | "total_spent" | "orders_count" | "rating" | "last_chat_at">[];
+  customers: CustomerRow[];
   totalRevenue: number;
   vipCount: number;
 };
 
+function DeleteButton({ id }: { id: string }) {
+  const [, startDelete] = useTransition();
+  return (
+    <button
+      onClick={() => {
+        if (!confirm("למחוק את הלקוח? לא ניתן לשחזר.")) return;
+        startDelete(async () => { await deleteCustomer(id); });
+      }}
+      className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+      title="מחק לקוח"
+    >
+      <Trash2 size={14} />
+    </button>
+  );
+}
+
 export default function CustomersClient({ customers, totalRevenue, vipCount }: Props) {
-  const { lang, s }             = useLanguage();
-  const [search,    setSearch]  = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
+  const { lang, s }               = useLanguage();
+  const [search,      setSearch]  = useState("");
+  const [modalOpen,   setModalOpen]   = useState(false);
+  const [editCustomer, setEditCustomer] = useState<CustomerRow | null>(null);
 
   const statusLabels: Record<string, string> = {
     vip:     s.statusVip,
@@ -46,7 +67,8 @@ export default function CustomersClient({ customers, totalRevenue, vipCount }: P
 
   return (
     <>
-      <AddCustomerModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <AddCustomerModal  open={modalOpen}     onClose={() => setModalOpen(false)} />
+      <EditCustomerModal customer={editCustomer} onClose={() => setEditCustomer(null)} />
 
       <div className="space-y-4">
         {/* Add customer button */}
@@ -165,9 +187,22 @@ export default function CustomersClient({ customers, totalRevenue, vipCount }: P
                         </span>
                       </td>
                       <td className="px-5 py-4 text-right">
-                        <button className="p-1.5 rounded-lg hover:bg-indigo-50 text-gray-400 hover:text-indigo-600 transition-colors">
-                          <MessageCircle size={15} />
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => setEditCustomer(c)}
+                            className="p-1.5 rounded-lg hover:bg-indigo-50 text-gray-400 hover:text-indigo-600 transition-colors"
+                            title="ערוך לקוח"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            className="p-1.5 rounded-lg hover:bg-indigo-50 text-gray-400 hover:text-indigo-600 transition-colors"
+                            title="שלח הודעה"
+                          >
+                            <MessageCircle size={14} />
+                          </button>
+                          <DeleteButton id={c.id} />
+                        </div>
                       </td>
                     </tr>
                   ))}
