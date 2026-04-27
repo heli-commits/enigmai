@@ -92,12 +92,15 @@ export default function PersonaClient({ initial }: { initial: Initial }) {
       }
       if (data.persona) {
         const p = data.persona;
-        if (p.traits)    setTraits(p.traits);
-        if (p.greeting)  setGreeting(p.greeting);
-        if (p.role)      setRole(p.role);
-        if (p.style)     setStyle(p.style);
-        if (p.rules)     setRules(p.rules);
-        if (p.knowledge) setKnowledge(p.knowledge);
+        if (p.traits)        setTraits(p.traits);
+        if (p.greeting)      setGreeting(p.greeting);
+        if (p.role)          setRole(p.role);
+        if (p.style)         setStyle(p.style);
+        if (p.rules)         setRules(p.rules);
+        if (p.escalation)    setEscalation(p.escalation);
+        if (p.knowledge)     setKnowledge(p.knowledge);
+        if (p.faqs)          setFaqs(p.faqs);
+        if (p.restrictions)  setRestrictions(p.restrictions);
         setActiveTab("identity");
       }
     } catch {
