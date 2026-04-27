@@ -1,21 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { X, Loader2, UserPlus } from "lucide-react";
+import { X, Loader2, UserPlus, AlertCircle } from "lucide-react";
 
 export type TeamRole = "admin" | "support";
 
 export type PendingMember = {
-  id: number;
-  name: string;
+  name:  string;
   email: string;
-  role: TeamRole;
+  role:  TeamRole;
 };
 
 type Props = {
-  open: boolean;
-  onClose: () => void;
-  onInvite: (member: PendingMember) => void;
+  open:     boolean;
+  onClose:  () => void;
+  onInvite: (member: PendingMember) => Promise<void>;
 };
 
 export default function InviteTeamModal({ open, onClose, onInvite }: Props) {
@@ -23,13 +22,14 @@ export default function InviteTeamModal({ open, onClose, onInvite }: Props) {
   const [email,   setEmail]   = useState("");
   const [role,    setRole]    = useState<TeamRole>("support");
   const [sending, setSending] = useState(false);
+  const [serverError, setServerError] = useState("");
   const [errors,  setErrors]  = useState<{ name?: string; email?: string }>({});
 
   function validate() {
     const e: typeof errors = {};
-    if (!name.trim())                                       e.name  = "שם חובה";
-    if (!email.trim())                                      e.email = "אימייל חובה";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))   e.email = "כתובת אימייל לא תקינה";
+    if (!name.trim())                                      e.name  = "שם חובה";
+    if (!email.trim())                                     e.email = "אימייל חובה";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))  e.email = "כתובת אימייל לא תקינה";
     return e;
   }
 
@@ -38,11 +38,16 @@ export default function InviteTeamModal({ open, onClose, onInvite }: Props) {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
     setSending(true);
-    await new Promise((r) => setTimeout(r, 700));
-    setSending(false);
-    onInvite({ id: Date.now(), name: name.trim(), email: email.trim(), role });
-    setName(""); setEmail(""); setRole("support"); setErrors({});
-    onClose();
+    setServerError("");
+    try {
+      await onInvite({ name: name.trim(), email: email.trim(), role });
+      setName(""); setEmail(""); setRole("support"); setErrors({});
+      onClose();
+    } catch (err) {
+      setServerError(err instanceof Error ? err.message : "שגיאה בשליחת ההזמנה");
+    } finally {
+      setSending(false);
+    }
   }
 
   if (!open) return null;
@@ -63,6 +68,13 @@ export default function InviteTeamModal({ open, onClose, onInvite }: Props) {
             </div>
           </div>
         </div>
+
+        {serverError && (
+          <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+            <AlertCircle size={15} className="text-red-500 flex-shrink-0" />
+            <p className="text-sm text-red-700">{serverError}</p>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

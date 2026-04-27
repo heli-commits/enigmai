@@ -6,6 +6,8 @@ export type TicketPriority = "normal" | "high" | "urgent";
 export type TicketStatus   = "open" | "closed";
 export type MessageRole    = "user" | "agent";
 export type SessionStatus  = "active" | "closed" | "escalated";
+export type MemberRole     = "owner" | "admin" | "support";
+export type MemberStatus   = "active" | "offline" | "pending";
 
 export interface Store {
   id: string;
@@ -26,6 +28,16 @@ export interface Store {
     faqs?:         string;
     restrictions?: string;
   };
+  created_at: string;
+}
+
+export interface TeamMember {
+  id:         string;
+  store_id:   string;
+  name:       string;
+  email:      string;
+  role:       MemberRole;
+  status:     MemberStatus;
   created_at: string;
 }
 
@@ -108,6 +120,7 @@ export type Database = {
   public: {
     Tables: {
       stores:          { Row: Store;          Insert: Omit<Store,          "id" | "created_at">; Update: Partial<Store> };
+      team_members:    { Row: TeamMember;     Insert: Omit<TeamMember,     "id" | "created_at">; Update: Partial<TeamMember> };
       customers:       { Row: Customer;       Insert: Omit<Customer,       "id" | "created_at">; Update: Partial<Customer> };
       products:        { Row: Product;        Insert: Omit<Product,        "id" | "created_at" | "updated_at">; Update: Partial<Product> };
       chat_sessions:   { Row: ChatSession;    Insert: Omit<ChatSession,    "id" | "created_at" | "updated_at" | "message_count" | "customer">; Update: Partial<ChatSession> };
