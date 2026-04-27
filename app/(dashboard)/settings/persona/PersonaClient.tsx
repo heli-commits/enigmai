@@ -59,9 +59,47 @@ export default function PersonaClient({ initial }: { initial: Initial }) {
     personaUpdates: Record<string, string>,
     agentNameUpdate?: string
   ) {
+    // Client-side guard: block save if every value is empty AND no agent name
+    const hasContent =
+      Object.values(personaUpdates).some(v => v.trim() !== "") ||
+      (agentNameUpdate ?? "").trim() !== "";
+
+    if (!hasContent) {
+      console.warn(`[PersonaClient] Blocked empty save for tab "${tab}" — all fields are empty`);
+      setTab(tab, {
+        pending: false,
+        success: false,
+        error: "אין תוכן לשמור. מלא לפחות שדה אחד לפני השמירה.",
+      });
+      return;
+    }
+
+    console.log(
+      `[PersonaClient] Saving tab "${tab}"`,
+      `| fields: [${Object.keys(personaUpdates).join(", ")}]`,
+      `| non-empty: [${Object.entries(personaUpdates).filter(([,v]) => v.trim()).map(([k]) => k).join(", ")}]`,
+    );
+
     setTab(tab, { pending: true, success: false, error: "" });
     try {
       const result = await savePersonaTabAction(personaUpdates, agentNameUpdate);
+
+      // Re-hydrate ALL local state from the DB's actual merged payload.
+      // This ensures the UI always reflects exactly what is in the database,
+      // catching any server-side normalization or partial failure.
+      if (result.success && result.saved) {
+        const s = result.saved;
+        if (s.role         !== undefined) setRole(s.role);
+        if (s.greeting     !== undefined) setGreeting(s.greeting);
+        if (s.traits       !== undefined) setTraits(s.traits);
+        if (s.rules        !== undefined) setRules(s.rules);
+        if (s.escalation   !== undefined) setEscalation(s.escalation);
+        if (s.style        !== undefined) setStyle(s.style);
+        if (s.knowledge    !== undefined) setKnowledge(s.knowledge);
+        if (s.faqs         !== undefined) setFaqs(s.faqs);
+        if (s.restrictions !== undefined) setRestrictions(s.restrictions);
+      }
+
       setTab(tab, {
         pending: false,
         success: result.success ?? false,

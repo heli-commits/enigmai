@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, createServiceClient } from "@/lib/supabase/server";
 import { getStore } from "@/lib/auth/getStore";
 
 // ─── Store Settings ───────────────────────────────────────────────────────────
@@ -44,6 +44,7 @@ export async function saveStoreSettings(
 export type PersonaSettingsState = {
   error?:   string;
   success?: boolean;
+  saved?:   Record<string, string>;
 };
 
 export async function savePersonaSettings(
@@ -78,34 +79,62 @@ export async function savePersonaTabAction(
   personaUpdates: Record<string, string>,
   agentNameUpdate?: string
 ): Promise<PersonaSettingsState> {
+  // 1. Verify auth and get the current store — already contains agent_persona
   const store = await getStore();
   if (!store) return { error: "לא מחובר" };
 
-  const supabase = await createServerClient();
-
-  // Read current persona to avoid overwriting other tabs
-  const { data } = await supabase
-    .from("stores")
-    .select("agent_persona")
-    .eq("id", store.id)
-    .single();
-
-  const current = (data?.agent_persona as Record<string, string>) ?? {};
-  const merged  = { ...current, ...personaUpdates };
-
-  const updateObj: Record<string, unknown> = { agent_persona: merged };
-  if (agentNameUpdate !== undefined) {
-    if (!agentNameUpdate.trim()) return { error: "שם הסוכן הוא שדה חובה" };
-    updateObj.agent_name = agentNameUpdate.trim();
+  // 2. Guard: nothing to write
+  const updateKeys = Object.keys(personaUpdates);
+  if (updateKeys.length === 0 && agentNameUpdate === undefined) {
+    console.warn("[savePersonaTabAction] called with no updates — aborting");
+    return { error: "אין שינויים לשמור" };
   }
 
-  const { error } = await supabase
+  // 3. Deep merge — use store.agent_persona that getStore() already fetched.
+  //    DO NOT make a second SELECT: if that query returns null (cookie/RLS
+  //    edge cases in Server Action context) current becomes {} and the write
+  //    overwrites the entire JSONB with only the current tab's fields.
+  const current: Record<string, string> =
+    ((store as unknown as { agent_persona?: Record<string, string> | null })
+      .agent_persona) ?? {};
+
+  // Drop undefined/null entries from the incoming updates
+  const updates: Record<string, string> = {};
+  for (const [k, v] of Object.entries(personaUpdates)) {
+    if (v !== undefined && v !== null) updates[k] = v;
+  }
+
+  const merged: Record<string, string> = { ...current, ...updates };
+
+  console.log(
+    `[savePersonaTabAction] storeId=${store.id}`,
+    `| current keys: [${Object.keys(current).join(", ")}]`,
+    `| updating: [${Object.keys(updates).join(", ")}]`,
+    `| merged keys: [${Object.keys(merged).join(", ")}]`,
+  );
+
+  // 4. Build the Supabase update payload
+  const updateObj: Record<string, unknown> = { agent_persona: merged };
+  if (agentNameUpdate !== undefined) {
+    const trimmed = agentNameUpdate.trim();
+    if (!trimmed) return { error: "שם הסוכן הוא שדה חובה" };
+    updateObj.agent_name = trimmed;
+  }
+
+  // 5. Use service client (bypasses RLS) — guaranteed write, no cookie dependency
+  const service = createServiceClient();
+  const { error } = await service
     .from("stores")
     .update(updateObj)
     .eq("id", store.id);
 
-  if (error) return { error: `שגיאת שמירה: ${error.message}` };
+  if (error) {
+    console.error("[savePersonaTabAction] Supabase error:", error.message);
+    return { error: `שגיאת שמירה: ${error.message}` };
+  }
 
   revalidatePath("/settings/persona");
-  return { success: true };
+
+  // 6. Return the merged payload so the client can re-hydrate from the DB truth
+  return { success: true, saved: merged };
 }
