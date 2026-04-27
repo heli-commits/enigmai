@@ -1,18 +1,31 @@
 export const dynamic = "force-dynamic";
+
 import { redirect } from "next/navigation";
-import { getStore } from "@/lib/auth/getStore";
+import { createServerClient, createServiceClient } from "@/lib/supabase/server";
 import PersonaClient from "./PersonaClient";
 
 export default async function PersonaSettingsPage() {
-  const store = await getStore();
+  // Auth via cookie client — only needed to get user.id
+  const authClient = await createServerClient();
+  const { data: { user } } = await authClient.auth.getUser();
+  if (!user) redirect("/login");
+
+  // Data via service client — bypasses RLS, guaranteed fresh read every request
+  const service = createServiceClient();
+  const { data: store } = await service
+    .from("stores")
+    .select("id, agent_name, agent_persona, domain")
+    .eq("user_id", user.id)
+    .single();
+
   if (!store) redirect("/login");
 
-  const p = (store as { agent_persona?: Record<string, string> }).agent_persona ?? {};
+  const p = (store.agent_persona as Record<string, string> | null) ?? {};
 
   return (
     <PersonaClient
       initial={{
-        agent_name:   (store as { agent_name?: string }).agent_name ?? "ארי",
+        agent_name:   (store.agent_name  as string)        ?? "ארי",
         role:         p.role         ?? "",
         greeting:     p.greeting     ?? "",
         traits:       p.traits       ?? "",
@@ -22,8 +35,9 @@ export default async function PersonaSettingsPage() {
         knowledge:    p.knowledge    ?? "",
         faqs:         p.faqs         ?? "",
         restrictions: p.restrictions ?? "",
-        domain:       (store as { domain?: string | null }).domain ?? "",
+        domain:       (store.domain as string | null) ?? "",
       }}
+      lastSyncedAt={new Date().toISOString()}
     />
   );
 }

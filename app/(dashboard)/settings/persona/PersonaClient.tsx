@@ -21,12 +21,15 @@ type Initial = {
   domain:       string;
 };
 
+type Props = { initial: Initial; lastSyncedAt: string };
+
 type TabId = "identity" | "behavior" | "style" | "knowledge" | "restrictions";
 type TabState = { pending: boolean; success: boolean; error: string };
 
 const EMPTY: TabState = { pending: false, success: false, error: "" };
 
-export default function PersonaClient({ initial }: { initial: Initial }) {
+export default function PersonaClient({ initial, lastSyncedAt }: Props) {
+  const [syncedAt, setSyncedAt] = useState<string>(lastSyncedAt);
   const [activeTab, setActiveTab] = useState<TabId>("identity");
 
   const [ts, setTs] = useState<Record<TabId, TabState>>({
@@ -85,8 +88,7 @@ export default function PersonaClient({ initial }: { initial: Initial }) {
       const result = await savePersonaTabAction(personaUpdates, agentNameUpdate);
 
       // Re-hydrate ALL local state from the DB's actual merged payload.
-      // This ensures the UI always reflects exactly what is in the database,
-      // catching any server-side normalization or partial failure.
+      // This ensures the UI reflects exactly what is in the database.
       if (result.success && result.saved) {
         const s = result.saved;
         if (s.role         !== undefined) setRole(s.role);
@@ -98,6 +100,7 @@ export default function PersonaClient({ initial }: { initial: Initial }) {
         if (s.knowledge    !== undefined) setKnowledge(s.knowledge);
         if (s.faqs         !== undefined) setFaqs(s.faqs);
         if (s.restrictions !== undefined) setRestrictions(s.restrictions);
+        setSyncedAt(new Date().toISOString());
       }
 
       setTab(tab, {
@@ -375,6 +378,9 @@ export default function PersonaClient({ initial }: { initial: Initial }) {
         </div>
       )}
 
+      {/* ── Sync status ── */}
+      <SyncStatus syncedAt={syncedAt} />
+
       {/* ── Restrictions ── */}
       {activeTab === "restrictions" && (
         <div className="space-y-5">
@@ -405,6 +411,20 @@ export default function PersonaClient({ initial }: { initial: Initial }) {
           />
         </div>
       )}
+    </div>
+  );
+}
+
+function SyncStatus({ syncedAt }: { syncedAt: string }) {
+  const d    = new Date(syncedAt);
+  const date = d.toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit", year: "2-digit" });
+  const time = d.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return (
+    <div className="flex items-center justify-end gap-1.5 pt-2" dir="rtl">
+      <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />
+      <p className="text-xs text-gray-400">
+        סונכרן עם Supabase: {date} {time}
+      </p>
     </div>
   );
 }

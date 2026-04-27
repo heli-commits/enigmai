@@ -79,26 +79,39 @@ export async function savePersonaTabAction(
   personaUpdates: Record<string, string>,
   agentNameUpdate?: string
 ): Promise<PersonaSettingsState> {
-  // 1. Verify auth and get the current store — already contains agent_persona
-  const store = await getStore();
-  if (!store) return { error: "לא מחובר" };
+  // 1. Auth: only use the cookie client to verify identity and get user.id.
+  //    All data operations below use the service client to eliminate RLS /
+  //    cookie-session edge cases that caused agent_persona to silently read
+  //    as null in the Server Action POST context.
+  const authClient = await createServerClient();
+  const { data: { user } } = await authClient.auth.getUser();
+  if (!user) return { error: "לא מחובר" };
 
   // 2. Guard: nothing to write
-  const updateKeys = Object.keys(personaUpdates);
-  if (updateKeys.length === 0 && agentNameUpdate === undefined) {
+  if (Object.keys(personaUpdates).length === 0 && agentNameUpdate === undefined) {
     console.warn("[savePersonaTabAction] called with no updates — aborting");
     return { error: "אין שינויים לשמור" };
   }
 
-  // 3. Deep merge — use store.agent_persona that getStore() already fetched.
-  //    DO NOT make a second SELECT: if that query returns null (cookie/RLS
-  //    edge cases in Server Action context) current becomes {} and the write
-  //    overwrites the entire JSONB with only the current tab's fields.
-  const current: Record<string, string> =
-    ((store as unknown as { agent_persona?: Record<string, string> | null })
-      .agent_persona) ?? {};
+  const service = createServiceClient();
 
-  // Drop undefined/null entries from the incoming updates
+  // 3. Fresh SELECT via service client — guaranteed to return the real JSONB,
+  //    no RLS policy or cookie dependency.
+  const { data: storeRow, error: selectErr } = await service
+    .from("stores")
+    .select("id, agent_persona")
+    .eq("user_id", user.id)
+    .single();
+
+  if (selectErr || !storeRow) {
+    console.error("[savePersonaTabAction] SELECT failed:", selectErr?.message ?? "no row");
+    return { error: "שגיאה בטעינת נתוני החנות. נסה שוב." };
+  }
+
+  // 4. Deep merge — start from the DB's authoritative current state.
+  const current: Record<string, string> =
+    (storeRow.agent_persona as Record<string, string> | null) ?? {};
+
   const updates: Record<string, string> = {};
   for (const [k, v] of Object.entries(personaUpdates)) {
     if (v !== undefined && v !== null) updates[k] = v;
@@ -106,14 +119,24 @@ export async function savePersonaTabAction(
 
   const merged: Record<string, string> = { ...current, ...updates };
 
+  // 5. "Merge or Die" — merged must contain every key that current had.
+  //    { ...current, ...updates } can never drop current keys, but this guard
+  //    protects against future refactors that might change the merge logic.
+  const lostKeys = Object.keys(current).filter(k => !(k in merged));
+
   console.log(
-    `[savePersonaTabAction] storeId=${store.id}`,
-    `| current keys: [${Object.keys(current).join(", ")}]`,
-    `| updating: [${Object.keys(updates).join(", ")}]`,
-    `| merged keys: [${Object.keys(merged).join(", ")}]`,
+    `[savePersonaTabAction] user=${user.id} store=${storeRow.id}`,
+    `| existing: [${Object.keys(current).join(", ")}]`,
+    `| incoming: [${Object.keys(updates).join(", ")}]`,
+    `| merged:   [${Object.keys(merged).join(", ")}]`,
+    lostKeys.length ? `| ⛔ LOST: [${lostKeys.join(", ")}] — ABORTING` : "| ✓ merge safe",
   );
 
-  // 4. Build the Supabase update payload
+  if (lostKeys.length > 0) {
+    return { error: `שגיאת מיזוג פנימית (מפתחות אבודים: ${lostKeys.join(", ")}). פנה לתמיכה.` };
+  }
+
+  // 6. Write via service client
   const updateObj: Record<string, unknown> = { agent_persona: merged };
   if (agentNameUpdate !== undefined) {
     const trimmed = agentNameUpdate.trim();
@@ -121,20 +144,18 @@ export async function savePersonaTabAction(
     updateObj.agent_name = trimmed;
   }
 
-  // 5. Use service client (bypasses RLS) — guaranteed write, no cookie dependency
-  const service = createServiceClient();
-  const { error } = await service
+  const { error: updateErr } = await service
     .from("stores")
     .update(updateObj)
-    .eq("id", store.id);
+    .eq("id", storeRow.id);
 
-  if (error) {
-    console.error("[savePersonaTabAction] Supabase error:", error.message);
-    return { error: `שגיאת שמירה: ${error.message}` };
+  if (updateErr) {
+    console.error("[savePersonaTabAction] UPDATE failed:", updateErr.message);
+    return { error: `שגיאת שמירה: ${updateErr.message}` };
   }
 
   revalidatePath("/settings/persona");
 
-  // 6. Return the merged payload so the client can re-hydrate from the DB truth
+  // 7. Return the full merged object — client re-hydrates from this DB truth.
   return { success: true, saved: merged };
 }
