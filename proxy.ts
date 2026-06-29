@@ -1,8 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-// Routes that don't require auth
-const PUBLIC_PATHS = ["/login", "/signup", "/auth/callback"];
+// Routes that don't require auth.
+// `/forgot-password` MUST be here: it's the recovery path for logged-out users,
+// so the proxy must not bounce them to /login before they can request a reset.
+// `/update-password` is intentionally NOT public — it's reached with a recovery
+// session after the email-callback, and marking it public would redirect that
+// authenticated user away to /dashboard before they can set a new password.
+const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth/callback"];
+
+// Copy any cookies the Supabase client wrote during session refresh onto a
+// redirect response. Without this, a rotated (single-use) refresh token is lost
+// whenever the proxy redirects, which logs the user straight back out.
+function withRefreshedCookies(
+  source: NextResponse,
+  redirect: NextResponse
+): NextResponse {
+  source.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+  return redirect;
+}
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -35,12 +51,18 @@ export async function proxy(request: NextRequest) {
 
   // Not authenticated → redirect to login (except for public + API routes)
   if (!user && !isPublic && !pathname.startsWith("/api")) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return withRefreshedCookies(
+      response,
+      NextResponse.redirect(new URL("/login", request.url))
+    );
   }
 
   // Already authenticated → redirect away from auth pages
   if (user && isPublic && pathname !== "/auth/callback") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return withRefreshedCookies(
+      response,
+      NextResponse.redirect(new URL("/dashboard", request.url))
+    );
   }
 
   return response;
